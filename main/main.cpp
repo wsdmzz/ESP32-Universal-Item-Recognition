@@ -136,6 +136,41 @@ static esp_err_t camera_init(void)
     return ESP_OK;
 }
 
+// ---------- YUV422 -> RGB888（修正 R/B 通道顺序）----------
+// esp32-camera 的 fmt2rgb888 对 YUV422 输出的是 B,G,R 顺序，而 ESP-DL
+// (DL_IMAGE_PIX_TYPE_RGB888) 与本项目的 rgb565() 都按 R,G,B 读取，
+// 导致红蓝互换：屏幕显示偏色、且模型输入颜色错乱使识别率下降。
+// 这里按标准 BT.601 全范围整数近似自行转换，输出真正的 R,G,B。
+static inline void yuv422_to_rgb888(const uint8_t *src, size_t src_len, uint8_t *dst)
+{
+    size_t pairs = src_len / 4;   // 每 4 字节 Y0 U Y1 V 对应 2 像素
+    for (size_t i = 0; i < pairs; i++) {
+        int y0 = src[i * 4 + 0];
+        int u  = (int)src[i * 4 + 1] - 128;
+        int y1 = src[i * 4 + 2];
+        int v  = (int)src[i * 4 + 3] - 128;
+        for (int p = 0; p < 2; p++) {
+            int yy = p ? y1 : y0;
+            int r = yy + ((1436 * v) >> 10);              // 1.402
+            int g = yy - ((352 * u + 731 * v) >> 10);     // -0.344 -0.714
+            int b = yy + ((1814 * u) >> 10);              // 1.772
+            *dst++ = (uint8_t)(r < 0 ? 0 : (r > 255 ? 255 : r));
+            *dst++ = (uint8_t)(g < 0 ? 0 : (g > 255 ? 255 : g));
+            *dst++ = (uint8_t)(b < 0 ? 0 : (b > 255 ? 255 : b));
+        }
+    }
+}
+
+// 统一帧转 RGB888：YUV422 走自研正确顺序，其余格式回退库函数
+static bool frame_to_rgb888(const camera_fb_t *fb, uint8_t *dst)
+{
+    if (fb->format == PIXFORMAT_YUV422) {
+        yuv422_to_rgb888(fb->buf, fb->len, dst);
+        return true;
+    }
+    return fmt2rgb888(fb->buf, fb->len, fb->format, dst);
+}
+
 // ---------- 识别主任务 ----------
 // ---------- 共享识别结果（detect_task 写，view_task 读）----------
 static SemaphoreHandle_t s_res_mux;
@@ -176,7 +211,7 @@ static void view_task(void *arg)
             continue;
         }
 
-        bool ok = fmt2rgb888(fb->buf, fb->len, fb->format, rgb888);
+        bool ok = frame_to_rgb888(fb, rgb888);
         esp_camera_fb_return(fb);
 
         if (!ok) {
@@ -228,7 +263,7 @@ static void detect_task(void *arg)
             continue;
         }
 
-        if (!fmt2rgb888(fb->buf, fb->len, fb->format, rgb_buf)) {
+        if (!frame_to_rgb888(fb, rgb_buf)) {
             ESP_LOGE(TAG, "fmt2rgb888 failed");
             esp_camera_fb_return(fb);
             vTaskDelay(pdMS_TO_TICKS(500));
