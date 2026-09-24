@@ -1,0 +1,37 @@
+menu "Quiz AI 配置"
+
+    config WIFI_SSID
+        string "WiFi SSID"
+        default "my_wifi"
+        help
+            接入点名称（用于云端 AI 出题）
+
+    config WIFI_PASSWORD
+        string "WiFi 密码"
+        default "my_password"
+        help
+            WPA2 密码
+
+    config QWEN_API_KEY
+        string "通义千问 API Key"
+        default ""
+        help
+            阿里云 DashScope API Key，格式 sk-xxxx。
+            留空则仅使用离线题库。
+
+    config QUIZ_INTERVAL_SEC
+        int "出题间隔（秒）"
+        default 5
+        range 2 60
+
+    config QUIZ_BATCH_SIZE
+        int "每次 AI 批量预取题数"
+        default 50
+        range 3 60
+
+    config QUIZ_ANALYSIS_EVERY
+        int "每答多少题触发一次 AI 分析"
+        default 20
+        range 5 100
+
+endmenu

@@ -1,0 +1,15 @@
+# ESP-IDF 构建产物
+build/
+managed_components/
+
+# 本地配置（含 WiFi 密码 / API Key 等敏感信息，勿提交）
+sdkconfig
+
+# Python
+__pycache__/
+*.pyc
+
+# 杂项
+*.log
+sdkconfig.old
+.vscode/
