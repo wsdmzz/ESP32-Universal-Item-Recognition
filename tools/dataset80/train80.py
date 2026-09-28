@@ -5,6 +5,7 @@
 产出: models/train80/best.pth + models/train80/model.pth (state_dict)
 """
 import json
+import os
 import random
 import time
 from pathlib import Path
@@ -21,12 +22,17 @@ DATA = ROOT / 'models' / 'dataset80'
 OUT = ROOT / 'models' / 'train80'
 OUT.mkdir(parents=True, exist_ok=True)
 
+# GPU 被 llama-server 常驻占用 -> 默认 CPU 训练（20 核），设 T80_DEVICE=cuda 可切回
+DEVICE = os.environ.get('T80_DEVICE', 'cpu')
+if DEVICE == 'cpu':
+    torch.set_num_threads(int(os.environ.get('T80_THREADS', '14')))
+
 IMAGES = DATA / 'images'
 SIZE = 224
-BATCH = 64       # GPU 与其他任务共享（仅剩 ~2.5GB），保守取 64
+BATCH = 128 if DEVICE == 'cpu' else 16
 EPOCHS = 30
-LR = 0.0025      # 随 batch 线性缩放
-WORKERS = 12
+LR = 0.02 if DEVICE == 'cpu' else 0.01   # batch128 线性缩放，小数据集保守取 0.02
+WORKERS = 5 if DEVICE == 'cpu' else 10
 
 
 def build():
@@ -77,8 +83,17 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
     ])
-    train_ds = datasets.ImageFolder(DATA / 'train', train_tf)
-    val_ds = datasets.ImageFolder(DATA / 'val', val_tf)
+    def safe_loader(path):
+        # Commons/公开数据集个别文件可能损坏，回退为中性灰图防训练崩溃
+        from PIL import Image
+        try:
+            with Image.open(path) as im:
+                return im.convert('RGB')
+        except Exception:
+            return Image.new('RGB', (SIZE, SIZE), (128, 128, 128))
+
+    train_ds = datasets.ImageFolder(DATA / 'train', train_tf, loader=safe_loader)
+    val_ds = datasets.ImageFolder(DATA / 'val', val_tf, loader=safe_loader)
     print('train imgs:', len(train_ds), 'val imgs:', len(val_ds))
 
     # ImageFolder 的类别按字母序编号，而设备端/导出统一用 classes80.yaml 分组序。
@@ -91,12 +106,13 @@ def main():
     perm = [classes.index(c) for c in alpha]   # 字母序 idx -> yaml 分组 idx
     train_ds.target_transform = lambda t: perm[t]
     val_ds.target_transform = lambda t: perm[t]
-    _probe = train_ds.samples[0][1]
-    assert train_ds[0][1] == perm[_probe] and train_ds[0][1] < len(classes)
+    # 纯映射校验，不加载图像（防损坏缩略图使训练启动即崩）
+    assert len(perm) == len(classes) and sorted(perm) == list(range(len(classes)))
+    assert all(perm[t] < len(classes) for _, t in train_ds.samples)
 
     model = mobilenet_v2(weights=MobileNet_V2_Weights.IMAGENET1K_V1)
     model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, len(classes))
-    model = model.cuda()
+    model = model.to(DEVICE)
 
     ema = {k: v.clone().float() for k, v in model.state_dict().items()}
 
@@ -110,10 +126,10 @@ def main():
 
     opt = torch.optim.SGD(model.parameters(), LR, momentum=0.9, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, EPOCHS)
-    amp = torch.amp.GradScaler('cuda')
+    pin = DEVICE == 'cuda'
     train_dl = DataLoader(train_ds, BATCH, shuffle=True, num_workers=WORKERS,
-                          pin_memory=True, drop_last=True)
-    val_dl = DataLoader(val_ds, 512, False, num_workers=8, pin_memory=True)
+                          pin_memory=pin, drop_last=True)
+    val_dl = DataLoader(val_ds, 256, False, num_workers=4, pin_memory=pin)
 
     best = 0.0
     for ep in range(EPOCHS):
@@ -121,14 +137,13 @@ def main():
         t0 = time.time()
         loss_sum = n = 0
         for x, y in train_dl:
-            x, y = x.cuda(non_blocking=True), y.cuda(non_blocking=True)
+            x, y = x.to(DEVICE), y.to(DEVICE)
             opt.zero_grad(set_to_none=True)
-            with torch.autocast('cuda', dtype=torch.bfloat16):
+            with torch.autocast(DEVICE, dtype=torch.bfloat16):
                 out = model(x)
                 loss = nn.functional.cross_entropy(out, y, label_smoothing=0.1)
-            amp.scale(loss).backward()
-            amp.step(opt)
-            amp.update_schedules() if hasattr(amp, 'update_schedules') else amp.update()
+            loss.backward()
+            opt.step()
             update_ema(model)
             loss_sum += loss.item() * x.size(0)
             n += x.size(0)
@@ -138,8 +153,9 @@ def main():
         ok = tot = 0
         with torch.no_grad():
             for x, y in val_dl:
-                x, y = x.cuda(non_blocking=True), y.cuda(non_blocking=True)
-                ok += (model(x).argmax(1) == y).sum().item()
+                x, y = x.to(DEVICE), y.to(DEVICE)
+                with torch.autocast(DEVICE, dtype=torch.bfloat16):
+                    ok += (model(x).argmax(1) == y).sum().item()
                 tot += y.size(0)
         acc = ok / tot
         print(f'ep{ep:02d} loss {loss_sum/n:.3f} val {acc:.4f} {time.time()-t0:.0f}s', flush=True)
