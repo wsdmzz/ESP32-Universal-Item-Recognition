@@ -1,0 +1,185 @@
+# 80 类端侧识别模型类别定义（水果20 / 蔬菜20 / 花卉20 / 日用品20）
+# 数据来源标记：
+#   in:<idx>       ImageNet-1k 验证集（tany0699/imagenet_val，0 基类别索引）
+#   f100:<folder>  ModelScope tany0699/fruits100（train+val 图像目录）
+#   veg:<folder>   ModelScope ai0pua/vegetable（Kaggle Vegetable Images）
+#   f14:<folder>   ModelScope tany0699/flowers14（train 图像目录）
+#   f102:<name>    Oxford 102 Flowers（kxs712/Flowers102.tar）
+#   commons:<Cat>  Wikimedia Commons 分类抓取
+groups:
+  fruit: [apple, peach, grape, watermelon, banana, orange, strawberry, cherry, mango, pineapple,
+          pear, kiwi, lemon, pomegranate, dragonfruit, blueberry, lychee, coconut, papaya, avocado]
+  vegetable: [tomato, carrot, broccoli, cucumber, corn, eggplant, potato, onion, bellpepper, cabbage,
+              lettuce, pumpkin, radish, spinach, garlic, ginger, mushroom, beans, cauliflower, bittergourd]
+  flower: [rose, lily, chrysanthemum, tulip, sunflower, orchid, peony, lotus, waterlily, daisy,
+           carnation, dandelion, iris, narcissus, hibiscus, calendula, blossom_cherry, jasmine, hydrangea, lavender]
+  item: [towel, cup, umbrella, bottle, chair, table, sofa, bed, book, clock, scissors, backpack,
+         watch, phone, keyboard, mouse, remote, glasses, spoon, fork]
+
+zh:
+  apple: 苹果
+  peach: 桃
+  grape: 葡萄
+  watermelon: 西瓜
+  banana: 香蕉
+  orange: 橙子
+  strawberry: 草莓
+  cherry: 车厘子
+  mango: 芒果
+  pineapple: 菠萝
+  pear: 梨
+  kiwi: 猕猴桃
+  lemon: 柠檬
+  pomegranate: 石榴
+  dragonfruit: 火龙果
+  blueberry: 蓝莓
+  lychee: 荔枝
+  coconut: 椰子
+  papaya: 木瓜
+  avocado: 牛油果
+  tomato: 番茄
+  carrot: 胡萝卜
+  broccoli: 西兰花
+  cucumber: 黄瓜
+  corn: 玉米
+  eggplant: 茄子
+  potato: 土豆
+  onion: 洋葱
+  bellpepper: 甜椒
+  cabbage: 卷心菜
+  lettuce: 生菜
+  pumpkin: 南瓜
+  radish: 萝卜
+  spinach: 菠菜
+  garlic: 大蒜
+  ginger: 生姜
+  mushroom: 蘑菇
+  beans: 四季豆
+  cauliflower: 花椰菜
+  bittergourd: 苦瓜
+  rose: 玫瑰
+  lily: 百合
+  chrysanthemum: 菊花
+  tulip: 郁金香
+  sunflower: 向日葵
+  orchid: 兰花
+  peony: 牡丹
+  lotus: 荷花
+  waterlily: 睡莲
+  daisy: 雏菊
+  carnation: 康乃馨
+  dandelion: 蒲公英
+  iris: 鸢尾花
+  narcissus: 水仙
+  hibiscus: 木槿
+  calendula: 金盏花
+  blossom_cherry: 樱花
+  jasmine: 茉莉
+  hydrangea: 绣球
+  lavender: 薰衣草
+  towel: 毛巾
+  cup: 水杯
+  umbrella: 雨伞
+  bottle: 瓶子
+  chair: 椅子
+  table: 桌子
+  sofa: 沙发
+  bed: 床
+  book: 书
+  clock: 时钟
+  scissors: 剪刀
+  backpack: 背包
+  watch: 手表
+  phone: 手机
+  keyboard: 键盘
+  mouse: 鼠标
+  remote: 遥控器
+  glasses: 眼镜
+  spoon: 勺子
+  fork: 叉子
+
+sources:
+  # ---- 水果 ----
+  apple: [f100:apple, in:948]
+  peach: [commons:Category:Peaches]
+  grape: [f100:grape]
+  watermelon: [commons:Category:Watermelons]
+  banana: [f100:banana, in:954]
+  orange: [f100:mandarine, in:950]
+  strawberry: [in:949]
+  cherry: [commons:Category:Cherries]
+  mango: [f100:mango]
+  pineapple: [f100:pineapple, in:953]
+  pear: [f100:yali_pear]
+  kiwi: [f100:hard_kiwi]
+  lemon: [in:951]
+  pomegranate: [f100:pomegranate, in:957]
+  dragonfruit: [f100:dragonfruit]
+  blueberry: [commons:Category:Blueberries]
+  lychee: [commons:Category:Lychees]
+  coconut: [f100:coconut]
+  papaya: [f100:papaya, veg:Papaya]
+  avocado: [f100:avocado]
+  # ---- 蔬菜 ----
+  tomato: [veg:Tomato]
+  carrot: [veg:Carrot]
+  broccoli: [veg:Broccoli]
+  cucumber: [veg:Cucumber]
+  corn: [in:987]
+  eggplant: [veg:Brinjal]
+  potato: [veg:Potato]
+  onion: [commons:Category:Onions]
+  bellpepper: [veg:Capsicum, in:945]
+  cabbage: [veg:Cabbage, in:936]
+  lettuce: [commons:Category:Lettuces]
+  pumpkin: [veg:Pumpkin]
+  radish: [veg:Radish]
+  spinach: [commons:Category:Spinacia_oleracea]
+  garlic: [commons:Category:Garlic]
+  ginger: [commons:Category:Zingiber_officinale]
+  mushroom: [in:947, commons:Category:Agaricus_bisporus]
+  beans: [veg:Bean]
+  cauliflower: [veg:Cauliflower]
+  bittergourd: [veg:Bitter_Gourd]
+  # ---- 花卉 ----
+  rose: [f14:rose, commons:Category:Rosa]
+  lily: [commons:Category:Lilium]
+  chrysanthemum: [commons:Category:Chrysanthemum]
+  tulip: [f14:tulip]
+  sunflower: [f14:sunflower]
+  orchid: [commons:Category:Orchidaceae]
+  peony: [commons:Category:Paeonia]
+  lotus: [commons:Category:Nelumbo_nucifera]
+  waterlily: [f14:water_lily]
+  daisy: [f14:common_daisy, in:985]
+  carnation: [f14:carnation]
+  dandelion: [f14:dandelion]
+  iris: [f14:iris]
+  narcissus: [commons:Category:Narcissus_(plant)]
+  hibiscus: [commons:Category:Hibiscus]
+  calendula: [f14:calendula]
+  blossom_cherry: [commons:Category:Cherry_blossom]
+  jasmine: [commons:Category:Jasminum]
+  hydrangea: [commons:Category:Hydrangea]
+  lavender: [commons:Category:Lavandula]
+  # ---- 日用品 ----
+  towel: [in:434]
+  cup: [in:504, in:968]
+  umbrella: [in:879]
+  bottle: [in:898, in:737]
+  chair: [commons:Category:Chairs]
+  table: [in:532]
+  sofa: [commons:Category:Sofas]
+  bed: [commons:Category:Beds]
+  book: [commons:Category:Books]
+  clock: [in:892, in:409]
+  scissors: [commons:Category:Scissors]
+  backpack: [in:414]
+  watch: [in:531, commons:Category:Wristwatches]
+  phone: [in:487]
+  keyboard: [in:508]
+  mouse: [in:673]
+  remote: [in:761]
+  glasses: [in:837, commons:Category:Eyeglasses]
+  spoon: [in:910, commons:Category:Spoons]
+  fork: [commons:Category:Forks_(eating_utensils)]

@@ -1,7 +1,7 @@
 // ============================================================
-// ESP32-S3 端侧摄像头物体识别 (FireBeetle 2 ESP32-S3 + OV3660)
+// ESP32-S3 端侧摄像头物品识别 (FireBeetle 2 ESP32-S3 + OV3660)
 // 流程: AXP313A 摄像头供电 -> DVP 采集 QVGA RGB888
-//       -> ESP-DL YOLO11n-320 int8 (COCO-80) 本地推理 -> TFT 显示
+//       -> ESP-DL MobileNetV2 INT8 (80 类 水果/蔬菜/花卉/日用品) 本地推理 -> TFT 显示
 // 出题机相关组件保留在仓库中，不再由本程序调用。
 // ============================================================
 #include <stdio.h>
@@ -17,7 +17,7 @@
 #include "img_converters.h"
 #include "axp313a.h"
 #include "tft_display.h"
-#include "coco_detect.hpp"
+#include "items80.hpp"
 
 static const char *TAG = "CAMDET";
 
@@ -41,19 +41,7 @@ static const char *TAG = "CAMDET";
 #define I2C_PORT        I2C_NUM_0
 
 #define DET_MAX_OBJS    8    // 屏幕最多展示的目标数
-#define SCORE_THR       0.35f
-
-// COCO-80 类别中文名（顺序与模型输出 category 一致）
-static const char *COCO_CN[80] = {
-    "人", "自行车", "汽车", "摩托车", "飞机", "公共汽车", "火车", "卡车", "船", "红绿灯",
-    "消防栓", "停车标志", "停车计时器", "长凳", "鸟", "猫", "狗", "马", "羊", "牛",
-    "大象", "熊", "斑马", "长颈鹿", "背包", "雨伞", "手提包", "领带", "行李箱", "飞盘",
-    "滑雪板", "单板滑雪板", "球", "风筝", "球棒", "棒球手套", "滑板", "冲浪板", "网球拍", "瓶子",
-    "酒杯", "杯子", "叉子", "刀", "勺子", "碗", "香蕉", "苹果", "三明治", "橙子",
-    "西兰花", "胡萝卜", "热狗", "比萨", "甜甜圈", "蛋糕", "椅子", "沙发", "盆栽", "床",
-    "餐桌", "马桶", "电视", "笔记本电脑", "鼠标", "遥控器", "键盘", "手机", "微波炉", "烤箱",
-    "烤面包机", "水槽", "冰箱", "书", "钟表", "花瓶", "剪刀", "玩具熊", "吹风机", "牙刷",
-};
+#define SCORE_THR       0.25f   // 分类置信度低于此值显示"不确定"
 
 // ---------- 共用 I2C 总线（AXP313A + 摄像头 SCCB）----------
 static esp_err_t shared_i2c_init(void)
@@ -241,9 +229,8 @@ static void view_task(void *arg)
 // ---------- 识别任务：周期性推理，更新共享结果 ----------
 static void detect_task(void *arg)
 {
-    COCODetect *detect = new COCODetect(COCODetect::YOLO11N_320_S8_V1, false);
-    detect->set_score_thr(SCORE_THR);
-    ESP_LOGI(TAG, "Model loaded");
+    Items80 *items = new Items80(false);
+    ESP_LOGI(TAG, "Items80 model loaded");
 
     static tft_object_t objs[DET_MAX_OBJS];
     uint8_t *rgb_buf = (uint8_t *)heap_caps_malloc(320 * 240 * 3, MALLOC_CAP_SPIRAM);
@@ -264,7 +251,7 @@ static void detect_task(void *arg)
         }
 
         if (!frame_to_rgb888(fb, rgb_buf)) {
-            ESP_LOGE(TAG, "fmt2rgb888 failed");
+            ESP_LOGE(TAG, "frame_to_rgb888 failed");
             esp_camera_fb_return(fb);
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
@@ -273,39 +260,30 @@ static void detect_task(void *arg)
         int fw = fb->width, fh = fb->height;
         esp_camera_fb_return(fb);   // 尽早归还，推流任务继续使用
 
-        dl::image::img_t img = {};
-        img.data     = rgb_buf;
-        img.width    = fw;
-        img.height   = fh;
-        img.pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB888;
-
         int64_t t0 = esp_timer_get_time();
-        auto &results = detect->run(img);
+        Items80::Result r = items->classify(rgb_buf, fw, fh);
         int64_t dt_us = esp_timer_get_time() - t0;
 
-        int n = 0;
-        // 图像坐标 320x240 与屏幕 1:1，直接作为整屏叠加框坐标
-        for (const auto &res : results) {
-            if (n >= DET_MAX_OBJS) break;
-            if (res.box.size() != 4) continue;
-            int x1 = res.box[0] * 320 / fw;
-            int y1 = res.box[1] * 240 / fh;
-            int x2 = res.box[2] * 320 / fw;
-            int y2 = res.box[3] * 240 / fh;
-            objs[n].label   = (res.category >= 0 && res.category < 80)
-                                  ? COCO_CN[res.category] : "未知";
-            objs[n].percent = (int)(res.score * 100.0f + 0.5f);
-            objs[n].x = x1;
-            objs[n].y = y1;
-            objs[n].w = x2 - x1;
-            objs[n].h = y2 - y1;
-            ESP_LOGI(TAG, "obj: %s %d%% box[%d,%d,%d,%d]",
-                     objs[n].label, objs[n].percent, x1, y1, x2, y2);
-            n++;
-        }
+        const char *label = Items80::cn(r.id);
+        int pct = (int)(r.score * 100.0f + 0.5f);
+        ESP_LOGI(TAG, "classify: %s (%s) %d%%  %.1fms",
+                 label, Items80::en(r.id), pct, dt_us / 1e3);
 
-        snprintf(status, sizeof(status), "识别到 %d 个物体 | 耗时 %.1fs",
-                 n, dt_us / 1e6);
+        int n = 0;
+        if (r.score >= SCORE_THR) {
+            // 分类器输出整幅画面的类别，铺满屏作为叠加框
+            objs[n].label   = label;
+            objs[n].percent = pct;
+            objs[n].x = 0;
+            objs[n].y = 0;
+            objs[n].w = 320;
+            objs[n].h = 240;
+            n++;
+            snprintf(status, sizeof(status), "%s %d%% | %.1fms",
+                     label, pct, dt_us / 1e3);
+        } else {
+            snprintf(status, sizeof(status), "未识别 | %.1fms", dt_us / 1e3);
+        }
         result_publish(objs, n, status);
 
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -342,7 +320,7 @@ extern "C" void app_main(void)
     }
 
     // 4) 加载模型（推流启动前先显示加载提示，避免黑屏等待）
-    tft_show_status("加载识别模型", "ESP-DL YOLO11n INT8 -> PSRAM");
+    tft_show_status("加载识别模型", "Items80 MobileNetV2 INT8 -> PSRAM");
 
     // 5) 双任务：推流(高优先级) + 周期推理
     xTaskCreate(view_task,   "view_task",   8192,  NULL, 5, NULL);

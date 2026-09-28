@@ -13,3 +13,8 @@ __pycache__/
 *.log
 sdkconfig.old
 .vscode/
+
+# 80 类训练数据与产物（体积大，不入库）
+models/dataset80/
+models/train80/
+espdl_files/
