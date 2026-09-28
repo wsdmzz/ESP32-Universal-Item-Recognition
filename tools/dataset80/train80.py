@@ -15,7 +15,12 @@ import torch.nn as nn
 import yaml
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
+from torchvision.models import mobilenet_v2
+try:   # torchvision>=0.13 新 weights API；DCU 集群是 0.10 老版，只有 pretrained=
+    from torchvision.models import MobileNet_V2_Weights
+    HAS_WEIGHTS = True
+except ImportError:
+    HAS_WEIGHTS = False
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / 'models' / 'dataset80'
@@ -29,10 +34,12 @@ if DEVICE == 'cpu':
 
 IMAGES = DATA / 'images'
 SIZE = 224
-BATCH = 128 if DEVICE == 'cpu' else 16
+BATCH = int(os.environ.get('T80_BATCH', '128' if DEVICE == 'cpu' else '16'))
 EPOCHS = 30
-LR = 0.02 if DEVICE == 'cpu' else 0.01   # batch128 线性缩放，小数据集保守取 0.02
+LR = float(os.environ.get('T80_LR', '0.02' if DEVICE == 'cpu' else '0.01'))
 WORKERS = 5 if DEVICE == 'cpu' else 10
+# DCU(dtk torch1.10) 不支持 bf16 autocast -> T80_AMP=off；本地 CPU 用 bf16
+AMP = os.environ.get('T80_AMP', 'bf16' if DEVICE == 'cpu' else 'off')
 
 
 def build():
@@ -110,7 +117,8 @@ def main():
     assert len(perm) == len(classes) and sorted(perm) == list(range(len(classes)))
     assert all(perm[t] < len(classes) for _, t in train_ds.samples)
 
-    model = mobilenet_v2(weights=MobileNet_V2_Weights.IMAGENET1K_V1)
+    model = (mobilenet_v2(weights=MobileNet_V2_Weights.IMAGENET1K_V1) if HAS_WEIGHTS
+             else mobilenet_v2(pretrained=True))
     model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, len(classes))
     model = model.to(DEVICE)
 
@@ -132,6 +140,15 @@ def main():
     val_dl = DataLoader(val_ds, 256, False, num_workers=4, pin_memory=pin)
 
     best = 0.0
+
+    from contextlib import nullcontext
+    def amp():
+        if AMP == 'bf16':
+            return torch.autocast(DEVICE, dtype=torch.bfloat16)
+        if AMP == 'fp16':
+            return torch.autocast(DEVICE, dtype=torch.float16)
+        return nullcontext()
+
     for ep in range(EPOCHS):
         model.train()
         t0 = time.time()
@@ -139,7 +156,7 @@ def main():
         for x, y in train_dl:
             x, y = x.to(DEVICE), y.to(DEVICE)
             opt.zero_grad(set_to_none=True)
-            with torch.autocast(DEVICE, dtype=torch.bfloat16):
+            with amp():
                 out = model(x)
                 loss = nn.functional.cross_entropy(out, y, label_smoothing=0.1)
             loss.backward()
@@ -154,7 +171,7 @@ def main():
         with torch.no_grad():
             for x, y in val_dl:
                 x, y = x.to(DEVICE), y.to(DEVICE)
-                with torch.autocast(DEVICE, dtype=torch.bfloat16):
+                with amp():
                     ok += (model(x).argmax(1) == y).sum().item()
                 tot += y.size(0)
         acc = ok / tot
