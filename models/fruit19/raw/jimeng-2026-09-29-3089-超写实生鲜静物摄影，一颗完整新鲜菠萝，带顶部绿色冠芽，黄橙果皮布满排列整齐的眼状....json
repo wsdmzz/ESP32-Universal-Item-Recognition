@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "菠萝",
+      "score": null,
+      "points": [
+        [
+          216,
+          165
+        ],
+        [
+          1057,
+          1542
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-3089-超写实生鲜静物摄影，一颗完整新鲜菠萝，带顶部绿色冠芽，黄橙果皮布满排列整齐的眼状....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

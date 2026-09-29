@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "水蜜桃",
+      "score": null,
+      "points": [
+        [
+          282,
+          448
+        ],
+        [
+          1082,
+          1135
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-4265-超写实生鲜静物摄影，一颗完整新鲜水蜜桃，带短果柄，粉白渐变果皮覆着细密白色绒毛，....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

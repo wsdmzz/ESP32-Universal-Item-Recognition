@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "柠檬",
+      "score": null,
+      "points": [
+        [
+          216,
+          337
+        ],
+        [
+          1112,
+          1291
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-8085-超写实生鲜静物摄影，一颗完整新鲜黄柠檬，带短果蒂，亮黄色厚果皮布满密集清晰油胞凸....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

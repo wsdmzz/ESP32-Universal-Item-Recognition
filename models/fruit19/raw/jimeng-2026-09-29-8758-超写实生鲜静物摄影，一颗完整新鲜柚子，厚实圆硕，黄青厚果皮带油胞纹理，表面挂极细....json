@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "柚子",
+      "score": null,
+      "points": [
+        [
+          90,
+          247
+        ],
+        [
+          1208,
+          1548
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-8758-超写实生鲜静物摄影，一颗完整新鲜柚子，厚实圆硕，黄青厚果皮带油胞纹理，表面挂极细....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

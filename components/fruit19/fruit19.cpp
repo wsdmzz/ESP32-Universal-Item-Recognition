@@ -1,6 +1,6 @@
-// items80.cpp — 从 items80 分区加载 espdl 分类模型并推理
-#include "items80.hpp"
-#include "items80_classes.hpp"
+// fruit19.cpp — 从 fruit19 分区加载 espdl 分类模型并推理（19 类固定水果）
+#include "fruit19.hpp"
+#include "fruit19_classes.hpp"
 
 #include "dl_model_base.hpp"
 #include "dl_image_preprocessor.hpp"
@@ -11,19 +11,19 @@
 #include <cmath>
 #include <vector>
 
-static const char *TAG = "items80";
+static const char *TAG = "fruit19";
 
 using namespace dl;
 using namespace fbs;
 
-Items80::Items80(bool verbose) : m_verbose(verbose)
+Fruit19::Fruit19(bool verbose) : m_verbose(verbose)
 {
     bool param_copy = true;
     if (heap_caps_get_total_size(MALLOC_CAP_SPIRAM) < 1024 * 1024 * 9) {
         param_copy = false;
     }
-    m_model = new Model("items80",                                    // 分区 label
-                        "items80.espdl",                              // 打包模型内文件名
+    m_model = new Model("fruit19",                                    // 分区 label
+                        "fruit19.espdl",                              // 打包模型内文件名
                         MODEL_LOCATION_IN_FLASH_PARTITION,
                         0,
                         MEMORY_MANAGER_GREEDY,
@@ -38,16 +38,16 @@ Items80::Items80(bool verbose) : m_verbose(verbose)
         m_model,
         std::array<float, 3>{0.485f * 255.f, 0.456f * 255.f, 0.406f * 255.f},
         std::array<float, 3>{0.229f * 255.f, 0.224f * 255.f, 0.225f * 255.f});
-    ESP_LOGI(TAG, "items80 espdl loaded");
+    ESP_LOGI(TAG, "fruit19 espdl loaded");
 }
 
-Items80::~Items80()
+Fruit19::~Fruit19()
 {
     delete m_preproc;
     delete m_model;
 }
 
-Items80::Result Items80::classify(const uint8_t *rgb888, int w, int h)
+Fruit19::Result Fruit19::classify(const uint8_t *rgb888, int w, int h)
 {
     image::img_t img = {};
     img.data     = const_cast<uint8_t *>(rgb888);
@@ -78,18 +78,18 @@ Items80::Result Items80::classify(const uint8_t *rgb888, int w, int h)
     float score = 1.f / ssum;
 
     if (m_verbose) {
-        ESP_LOGI(TAG, "top1=%s (%.1f%%) %.0fms", ITEMS80_CN[best], score * 100.f, dt_us / 1000.f);
+        ESP_LOGI(TAG, "top1=%s (%.1f%%) %.0fms", FRUIT19_CN[best], score * 100.f, dt_us / 1000.f);
     }
     Result r{best, score};
     return r;
 }
 
-const char *Items80::cn(int id)
+const char *Fruit19::cn(int id)
 {
-    return (id >= 0 && id < NUM_CLASSES) ? ITEMS80_CN[id] : "未知";
+    return (id >= 0 && id < NUM_CLASSES) ? FRUIT19_CN[id] : "未知";
 }
 
-const char *Items80::en(int id)
+const char *Fruit19::en(int id)
 {
-    return (id >= 0 && id < NUM_CLASSES) ? ITEMS80_EN[id] : "?";
+    return (id >= 0 && id < NUM_CLASSES) ? FRUIT19_EN[id] : "?";
 }

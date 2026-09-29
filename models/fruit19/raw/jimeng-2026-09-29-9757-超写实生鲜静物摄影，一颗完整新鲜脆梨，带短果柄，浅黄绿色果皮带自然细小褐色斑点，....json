@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "梨",
+      "score": null,
+      "points": [
+        [
+          291,
+          336
+        ],
+        [
+          1081,
+          1319
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-9757-超写实生鲜静物摄影，一颗完整新鲜脆梨，带短果柄，浅黄绿色果皮带自然细小褐色斑点，....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

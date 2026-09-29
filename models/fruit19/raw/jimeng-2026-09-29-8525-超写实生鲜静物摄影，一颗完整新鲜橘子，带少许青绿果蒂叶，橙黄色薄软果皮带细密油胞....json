@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "橘子",
+      "score": null,
+      "points": [
+        [
+          187,
+          438
+        ],
+        [
+          1132,
+          1344
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-8525-超写实生鲜静物摄影，一颗完整新鲜橘子，带少许青绿果蒂叶，橙黄色薄软果皮带细密油胞....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

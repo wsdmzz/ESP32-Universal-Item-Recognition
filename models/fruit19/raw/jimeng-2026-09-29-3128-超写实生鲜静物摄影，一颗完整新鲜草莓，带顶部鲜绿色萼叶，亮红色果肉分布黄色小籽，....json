@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "草莓",
+      "score": null,
+      "points": [
+        [
+          96,
+          256
+        ],
+        [
+          1084,
+          1418
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-3128-超写实生鲜静物摄影，一颗完整新鲜草莓，带顶部鲜绿色萼叶，亮红色果肉分布黄色小籽，....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

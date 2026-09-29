@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "葡萄",
+      "score": null,
+      "points": [
+        [
+          190,
+          455
+        ],
+        [
+          1124,
+          1304
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-3576-超写实生鲜静物摄影，一小串完整新鲜葡萄，紫黑色饱满果粒，表面覆着天然白果粉果霜，....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

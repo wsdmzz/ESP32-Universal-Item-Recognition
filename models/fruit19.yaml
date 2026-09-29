@@ -1,0 +1,83 @@
+# fruit19 —— 端侧固定 19 类水果识别（替换 items80）
+# 场景：ESP32-S3 OV3660 拍摄屏幕上展示的即梦生成水果静物图
+# 类序即端侧 label 索引（components/fruit19/include/fruit19_classes.hpp 必须一致）
+# real_map: 可从 models/dataset80/images/<dir> 补充真实照片的类（无对应则纯生成图训练）
+version: 1
+groups:
+  fruit:
+    - peach          # 水蜜桃
+    - hamimelon      # 哈密瓜
+    - dragonfruit    # 红心火龙果
+    - kiwi           # 猕猴桃
+    - grape          # 葡萄
+    - pineapple      # 菠萝
+    - strawberry     # 草莓
+    - blueberry      # 蓝莓
+    - cherry         # 樱桃
+    - longan         # 龙眼
+    - lychee         # 荔枝
+    - watermelon     # 西瓜
+    - lemon          # 黄柠檬
+    - mandarin       # 橘子
+    - papaya         # 木瓜
+    - pomelo         # 柚子
+    - plum           # 李子
+    - orange         # 橙子
+    - pear           # 脆梨
+zh:
+  peach: 水蜜桃
+  hamimelon: 哈密瓜
+  dragonfruit: 红心火龙果
+  kiwi: 猕猴桃
+  grape: 葡萄
+  pineapple: 菠萝
+  strawberry: 草莓
+  blueberry: 蓝莓
+  cherry: 樱桃
+  longan: 龙眼
+  lychee: 荔枝
+  watermelon: 西瓜
+  lemon: 黄柠檬
+  mandarin: 橘子
+  papaya: 木瓜
+  pomelo: 柚子
+  plum: 李子
+  orange: 橙子
+  pear: 脆梨
+# 生成图文件名里的中文品种 -> 类名
+gen_zh_map:
+  水蜜桃: peach
+  哈密瓜: hamimelon
+  红心火龙果: dragonfruit
+  猕猴桃: kiwi
+  葡萄: grape
+  菠萝: pineapple
+  草莓: strawberry
+  蓝莓: blueberry
+  樱桃: cherry
+  龙眼: longan
+  荔枝: lychee
+  西瓜: watermelon
+  黄柠檬: lemon
+  橘子: mandarin
+  木瓜: papaya
+  柚子: pomelo
+  李子: plum
+  橙子: orange
+  脆梨: pear
+# dataset80 真实照片补充映射（橘子≠橙子，不混；龙眼/柚子/李子/哈密瓜无可靠对应，不混）
+real_map:
+  peach: peach
+  dragonfruit: dragonfruit
+  kiwi: kiwi
+  grape: grape
+  pineapple: pineapple
+  strawberry: strawberry
+  blueberry: blueberry
+  cherry: cherry
+  lychee: lychee
+  watermelon: watermelon
+  lemon: lemon
+  papaya: papaya
+  orange: orange
+  pear: pear

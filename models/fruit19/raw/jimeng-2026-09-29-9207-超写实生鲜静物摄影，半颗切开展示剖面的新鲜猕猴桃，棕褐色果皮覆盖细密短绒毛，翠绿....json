@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "猕猴桃",
+      "score": null,
+      "points": [
+        [
+          150,
+          376
+        ],
+        [
+          1164,
+          1376
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-9207-超写实生鲜静物摄影，半颗切开展示剖面的新鲜猕猴桃，棕褐色果皮覆盖细密短绒毛，翠绿....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

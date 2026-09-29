@@ -1,4 +1,4 @@
-// items80.hpp — 80 类花果蔬菜日用品 INT8 分类器（espdl, ESP32-S3）
+// fruit19.hpp — 19 类固定水果 INT8 分类器（espdl, ESP32-S3，拍屏闭集识别）
 #pragma once
 #include <cstdint>
 #include <memory>
@@ -10,15 +10,15 @@ class ImagePreprocessor;
 }
 }
 
-class Items80 {
+class Fruit19 {
 public:
-    static constexpr int NUM_CLASSES = 80;
+    static constexpr int NUM_CLASSES = 19;
 
-    explicit Items80(bool verbose = false);
-    ~Items80();
+    explicit Fruit19(bool verbose = false);
+    ~Fruit19();
 
     struct Result {
-        int id;         // 类别索引（classes80 顺序）
+        int id;         // 类别索引（fruit19.yaml groups.fruit 顺序）
         float score;    // softmax 置信度 0-1
     };
 
@@ -34,4 +34,4 @@ private:
     bool m_verbose;
 };
 
-using Items80Ptr = std::shared_ptr<Items80>;
+using Fruit19Ptr = std::shared_ptr<Fruit19>;

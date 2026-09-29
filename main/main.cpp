@@ -1,7 +1,7 @@
 // ============================================================
 // ESP32-S3 端侧摄像头物品识别 (FireBeetle 2 ESP32-S3 + OV3660)
 // 流程: AXP313A 摄像头供电 -> DVP 采集 QVGA RGB888
-//       -> ESP-DL MobileNetV2 INT8 (80 类 水果/蔬菜/花卉/日用品) 本地推理 -> TFT 显示
+//       -> ESP-DL MobileNetV2 INT8 (19 类固定水果, 拍屏闭集识别) 本地推理 -> TFT 显示
 // 出题机相关组件保留在仓库中，不再由本程序调用。
 // ============================================================
 #include <stdio.h>
@@ -17,7 +17,7 @@
 #include "img_converters.h"
 #include "axp313a.h"
 #include "tft_display.h"
-#include "items80.hpp"
+#include "fruit19.hpp"
 
 static const char *TAG = "CAMDET";
 
@@ -229,8 +229,8 @@ static void view_task(void *arg)
 // ---------- 识别任务：周期性推理，更新共享结果 ----------
 static void detect_task(void *arg)
 {
-    Items80 *items = new Items80(false);
-    ESP_LOGI(TAG, "Items80 model loaded");
+    Fruit19 *items = new Fruit19(false);
+    ESP_LOGI(TAG, "Fruit19 model loaded");
 
     static tft_object_t objs[DET_MAX_OBJS];
     uint8_t *rgb_buf = (uint8_t *)heap_caps_malloc(320 * 240 * 3, MALLOC_CAP_SPIRAM);
@@ -261,13 +261,13 @@ static void detect_task(void *arg)
         esp_camera_fb_return(fb);   // 尽早归还，推流任务继续使用
 
         int64_t t0 = esp_timer_get_time();
-        Items80::Result r = items->classify(rgb_buf, fw, fh);
+        Fruit19::Result r = items->classify(rgb_buf, fw, fh);
         int64_t dt_us = esp_timer_get_time() - t0;
 
-        const char *label = Items80::cn(r.id);
+        const char *label = Fruit19::cn(r.id);
         int pct = (int)(r.score * 100.0f + 0.5f);
         ESP_LOGI(TAG, "classify: %s (%s) %d%%  %.1fms",
-                 label, Items80::en(r.id), pct, dt_us / 1e3);
+                 label, Fruit19::en(r.id), pct, dt_us / 1e3);
 
         int n = 0;
         if (r.score >= SCORE_THR) {
@@ -320,7 +320,7 @@ extern "C" void app_main(void)
     }
 
     // 4) 加载模型（推流启动前先显示加载提示，避免黑屏等待）
-    tft_show_status("加载识别模型", "Items80 MobileNetV2 INT8 -> PSRAM");
+    tft_show_status("加载识别模型", "Fruit19 MobileNetV2 INT8 -> PSRAM");
 
     // 5) 双任务：推流(高优先级) + 周期推理
     xTaskCreate(view_task,   "view_task",   8192,  NULL, 5, NULL);

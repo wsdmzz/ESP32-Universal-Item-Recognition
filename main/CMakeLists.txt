@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS "main.cpp"
     INCLUDE_DIRS "."
-    REQUIRES axp313a tft_display esp32-camera esp-dl items80
+    REQUIRES axp313a tft_display esp32-camera esp-dl fruit19
              driver esp_timer spi_flash
 )
 

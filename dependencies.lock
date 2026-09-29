@@ -21,7 +21,7 @@ dependencies:
       type: service
     version: 0.7.0
   espressif/esp-dl:
-    component_hash: d792e72ab3858d805d8918d1215a862541344625f62134597866834de666fd04
+    component_hash: 233ee8d37dfedeb637fc74713b87bd861ac530cfbcc4c63c57c2e51064cdda31
     dependencies:
     - name: espressif/dl_fft
       registry_url: https://components.espressif.com
@@ -47,7 +47,7 @@ dependencies:
     - esp32s2
     - esp32s3
     - esp32s31
-    version: 3.3.12
+    version: 3.3.11
   espressif/esp32-camera:
     component_hash: bc9c8a6b51df777a014fa295825b3de5069bc0300c317acff20c97cf4a10ac7d
     dependencies:

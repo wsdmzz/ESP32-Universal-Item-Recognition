@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "西瓜",
+      "score": null,
+      "points": [
+        [
+          182,
+          393
+        ],
+        [
+          1133,
+          1382
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-7967-超写实生鲜静物摄影，半颗切开展示剖面的新鲜西瓜，深绿青皮带深绿色波浪纹路，红沙果....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "火龙果",
+      "score": null,
+      "points": [
+        [
+          186,
+          228
+        ],
+        [
+          1154,
+          1464
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-5109-超写实生鲜静物摄影，一颗完整新鲜红心火龙果，洋红色厚果皮分布排列整齐的绿色肉质鳞....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}

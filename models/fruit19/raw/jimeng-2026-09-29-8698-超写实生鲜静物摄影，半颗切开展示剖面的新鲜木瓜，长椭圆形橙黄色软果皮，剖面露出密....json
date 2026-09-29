@@ -1,0 +1,31 @@
+{
+  "version": "x-anylabeling",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "木瓜",
+      "score": null,
+      "points": [
+        [
+          115,
+          436
+        ],
+        [
+          1158,
+          1315
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": {}
+    }
+  ],
+  "imagePath": "jimeng-2026-09-29-8698-超写实生鲜静物摄影，半颗切开展示剖面的新鲜木瓜，长椭圆形橙黄色软果皮，剖面露出密....png",
+  "imageData": null,
+  "imageHeight": 1728,
+  "imageWidth": 1296
+}
