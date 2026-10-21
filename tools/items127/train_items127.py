@@ -39,10 +39,10 @@ DEVICE = os.environ.get('T80_DEVICE', 'cpu')
 if DEVICE == 'cpu':
     torch.set_num_threads(int(os.environ.get('T80_THREADS', '14')))
 SIZE = 224
-BATCH = int(os.environ.get('T80_BATCH', '64'))
+BATCH = int(os.environ.get('T80_BATCH', '32'))  # DCU 显存有限，默认 32
 EPOCHS = int(os.environ.get('T80_EPOCHS', '60'))
 LR = float(os.environ.get('T80_LR', '0.01'))
-WORKERS = 5 if DEVICE == 'cpu' else 10
+WORKERS = 4 if DEVICE == 'cpu' else 6  # DCU 建议 ≤8 workers
 AMP = os.environ.get('T80_AMP', 'bf16' if DEVICE == 'cpu' else 'off')
 AUG_PER_EPOCH = int(os.environ.get('T80_AUG_PER_EPOCH', '2000'))
 
