@@ -10,8 +10,8 @@ endif()
 
 project(esp32_math_quiz)
 
-# fruit19 模型镜像：存在 espdl_files/fruit19.espdl 时随 flash 一并烧入 data 分区
-set(FRUIT19_ESPDL "${CMAKE_CURRENT_LIST_DIR}/espdl_files/fruit19.espdl")
-if(EXISTS ${FRUIT19_ESPDL})
-    esptool_py_flash_to_partition(flash "fruit19" "${FRUIT19_ESPDL}")
+# items127 模型镜像：存在 espdl_files/items127.espdl 时随 flash 一并烧入 data 分区
+set(ITEMS127_ESPDL "${CMAKE_CURRENT_LIST_DIR}/espdl_files/items127.espdl")
+if(EXISTS ${ITEMS127_ESPDL})
+    esptool_py_flash_to_partition(flash "items127" "${ITEMS127_ESPDL}")
 endif()

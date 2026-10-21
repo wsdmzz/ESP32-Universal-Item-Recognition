@@ -42,7 +42,7 @@ SIZE = 224
 BATCH = int(os.environ.get('T80_BATCH', '32'))  # DCU 显存有限，默认 32
 EPOCHS = int(os.environ.get('T80_EPOCHS', '60'))
 LR = float(os.environ.get('T80_LR', '0.01'))
-WORKERS = 4 if DEVICE == 'cpu' else 6  # DCU 建议 ≤8 workers
+WORKERS = 0  # DCU 集群多进程 DataLoader 易卡死，用主进程加载
 AMP = os.environ.get('T80_AMP', 'bf16' if DEVICE == 'cpu' else 'off')
 AUG_PER_EPOCH = int(os.environ.get('T80_AUG_PER_EPOCH', '2000'))
 

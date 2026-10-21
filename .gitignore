@@ -22,3 +22,7 @@ espdl_files/
 # fruit19 训练数据与产物（19 张生成图原图已入库 models/fruit19/raw/）
 models/dataset_fruit19/
 models/train_fruit19/
+
+# items127 训练数据与产物（127 张生成图原图已入库 models/items127/raw/）
+models/dataset_items127/
+models/train_items127/
