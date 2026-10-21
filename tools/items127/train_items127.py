@@ -145,10 +145,11 @@ def main():
     val_dl = DataLoader(val_ds, batch_size=BATCH, shuffle=False, num_workers=WORKERS, pin_memory=True)
 
     model = build_model(num_classes)
-    ema = {k: v.clone().detach() for k, v in model.state_dict().items()}
+    # EMA: only track float parameters (skip buffers like num_batches_tracked in BatchNorm)
+    ema = {k: v.clone().detach().float() for k, v in model.state_dict().items() if v.dtype.is_floating_point}
     ema_decay = 0.999
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=LR, momentum=0.9, weight_decay=1e-4)
+    optimizer = torch.optim.SGD([p for p in model.parameters() if p.dtype.is_floating_point], lr=LR, momentum=0.9, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
     criterion = nn.CrossEntropyLoss()
 
@@ -168,10 +169,11 @@ def main():
                 loss = criterion(pred, y)
             loss.backward()
             optimizer.step()
-            # EMA update
+            # EMA update (only float params)
             with torch.no_grad():
                 for k, v in model.state_dict().items():
-                    ema[k].mul_(ema_decay).add_(v, alpha=1 - ema_decay)
+                    if k in ema and v.dtype.is_floating_point:
+                        ema[k].mul_(ema_decay).add_(v.float(), alpha=1 - ema_decay)
             loss_sum += loss.item() * y.size(0)
             n += y.size(0)
         scheduler.step()
