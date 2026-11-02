@@ -61,6 +61,11 @@ Items127::Result Items127::classify(const uint8_t *rgb888, int w, int h)
     int64_t dt_us = esp_timer_get_time() - t0;
 
     TensorBase *out = m_model->get_output();
+    if (!out || !out->data) {
+        ESP_LOGE(TAG, "classify: invalid model output out=%p data=%p", out, out ? out->data : nullptr);
+        return {-1, 0.0f};
+    }
+
     const int8_t *raw = static_cast<const int8_t *>(out->data);
     float scale = std::ldexp(1.0f, out->exponent.get());
 
@@ -77,9 +82,7 @@ Items127::Result Items127::classify(const uint8_t *rgb888, int w, int h)
     for (float v : logits) ssum += std::exp((v - mx) * 2.0f);
     float score = 1.f / ssum;
 
-    if (m_verbose) {
-        ESP_LOGI(TAG, "top1=%s (%.1f%%) %.0fms", ITEMS127_CN[best], score * 100.f, dt_us / 1000.f);
-    }
+    ESP_LOGI(TAG, "top1=%s (%.1f%%) %.0fms", ITEMS127_CN[best], score * 100.f, dt_us / 1000.f);
     Result r{best, score};
     return r;
 }
