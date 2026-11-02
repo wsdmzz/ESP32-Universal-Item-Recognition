@@ -1,28 +1,63 @@
-# ESP-IDF 构建产物
+# ---------- ESP-IDF 构建产物 ----------
 build/
 managed_components/
+sdkconfig.old
 
-# 本地配置（含 WiFi 密码 / API Key 等敏感信息，勿提交）
+# 本地配置：含 CONFIG_WIFI_SSID / CONFIG_WIFI_PASSWORD / CONFIG_QWEN_API_KEY。
+# 可复用的非默认配置在 sdkconfig.defaults 里，凭据本身永远不要解除忽略。
 sdkconfig
 
-# Python
+# ---------- Python / 杂项 ----------
 __pycache__/
 *.pyc
-
-# 杂项
 *.log
-sdkconfig.old
 .vscode/
 
-# 80 类训练数据与产物（体积大，不入库）
+# ---------- 量化中间产物 ----------
+# 只放行设备真正在跑的 items103 INT8 权重（2.6MB，见 docs/model-pipeline.md）。
+# .onnx / .info / .json / *.bak / _new / _broken 都是导出过程的临时物，可重导。
+espdl_files/*
+!espdl_files/items103.espdl
+
+# ---------- items80（已停用）----------
 models/dataset80/
 models/train80/
-espdl_files/
 
-# fruit19 训练数据与产物（19 张生成图原图已入库 models/fruit19/raw/）
+# ---------- fruit19（已停用，原图已入库 models/fruit19/raw/）----------
 models/dataset_fruit19/
 models/train_fruit19/
 
-# items127 训练数据与产物（127 张生成图原图已入库 models/items127/raw/）
+# ---------- items127（已停用，原图已入库 models/items127/raw/）----------
 models/dataset_items127/
 models/train_items127/
+models/items127/raw_augmented/
+models/items127/raw_aug_320/
+models/items127/captures/
+models/items127/real_captures/
+
+# ---------- items103：当前在用 ----------
+# items103 图库的源头：1280x800 即梦原图（11M，唯一不可重生的素材，入库）。
+# 另外两层是 tools/scale_to_480x320.py 的产物，其中 photos_480x320 与
+# spiffs_data/photos 逐字节相同，不必重复入库。
+生活常见品图片/photos_480x320/
+生活常见品图片/photos_320x240_crop/
+# 与已入库的 models/items127/raw/ 逐文件名相同的重复目录（items127 时代的即梦原图），
+# 不重复占 127MB。
+常见物品训练/
+# 源图链：生活常见品图片/photos_1280x800_raw -> photos_480x320(=spiffs_data/photos)
+#   -> augmented/<类>/*.jpg (20 张屏幕模拟增强)  -> models/items103/raw_aug_240/
+#   -> models/dataset_items103/{train,val}
+# augmented/ **入库**：这批「拍屏模拟」增强图（摩尔纹/反光/色偏/透视/运动模糊的组合）
+# 是训练集唯一的源头，而当初生成它的脚本没有留存下来，删了就再也复现不出同一个模型。
+# 后面两层是已提交脚本的产物，可再生，不入库（重建命令见 docs/model-pipeline.md）。
+models/items103/raw_aug_240/
+models/dataset_items103/
+# 自学习攒的实拍帧：本地资产，攒够就走微调，不进 git（体积会无限长）
+models/items103/real_captures/
+# 标签错位那批坏帧，留作反面教材用不上，不入库
+models/items103/cap_test_badlabels/
+# 训练产物：只保留能重导量化 / 能继续微调的三件，其余（best_ema、日志）不入库
+models/train_items103/*
+!models/train_items103/best.pth
+!models/train_items103/last.pth
+!models/train_items103/classes103.json
