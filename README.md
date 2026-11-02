@@ -1,107 +1,131 @@
-# ESP32-S3 端侧物体识别（摄像头实时推流 + AI 画框）
+# ESP32-S3 端侧物品识别 + 自学习闭环
 
-基于 **DFRobot FireBeetle 2 ESP32-S3**（DFR0975，N16R8：16MB Flash / 8MB Octal PSRAM）的
-纯端侧通用物体识别设备：**OV3660 摄像头**采集画面，实时推流到板载 **2.0" 320x240 ST7789 TFT**，
-由 **ESP-DL YOLO11n INT8** 模型在设备本地完成 COCO-80 类目标检测，识别框与中文标签直接叠加在视频上。
+基于 **DFRobot FireBeetle 2 ESP32-S3**（DFR0975 V1.1，N16R8：16MB Flash / 8MB Octal PSRAM）
+的纯端侧常见物品识别设备。**推理全部在 ESP32-S3 上完成，不依赖云端。**
 
-**不依赖云端、不依赖 WiFi** —— 模型推理全部在 ESP32-S3 上运行。
+WiFi 只用来做一件事：让 PC 能拉走「模型看到的那一帧」做诊断和采集。拔了网线设备照常识别。
 
-## 效果
-
-- 全屏实时视频：QVGA(320x240) 画面连续刷新推流到 TFT
-- 端侧检测：约每 5~6 秒一轮推理，检测到物体时画彩色边框 + 中文标签（如 `键盘 62%`）
-- 底栏状态：`识别到 N 个物体 | 耗时 X.Xs`
-- 支持 80 类 COCO 常见物体（人/杯子/椅子/电脑/键盘/瓶子/食物…），最多同屏展示 8 个目标
-- 注：由于推理耗时，识别框相对视频有约 5 秒刷新间隔（端侧算力限制，属正常现象）
-
-## 硬件
-
-| 部件 | 型号 | 接口 |
-|------|------|------|
-| 主控板 | FireBeetle 2 ESP32-S3（V1.1，带 AXP313A PMIC） | — |
-| 摄像头 | OV3660（DFRobot CAM 套件） | CAM FPC 座（8bit DVP + SCCB） |
-| 显示屏 | 2.0" 320x240 IPS（ST7789） | GDI FPC 座（SPI） |
-| 电源管理 | AXP313A | 共用 I2C（SDA=1 / SCL=2） |
-
-### 引脚一览（均来自 DFRobot 官方 wiki，勿凭"常规 ESP32"经验改动）
-
-**GDI 屏**：MOSI=15，SCK=17，CS=18，DC=3，RST=38，BL=21
-
-**CAM DVP**：XCLK=45，PCLK=5，VSYNC=6，HREF=42，
-数据 D0..D7（传感器 D2..D9）= 39, 40, 41, 4, 7, 8, 46, 48
-
-**I2C**：SDA=1，SCL=2（AXP313A 与摄像头 SCCB 复用同一总线）
-
-**摄像头供电**：AXP313A（I2C 地址 `0x36`）需先使能 ALDO=1.5V（DVDD）、DLDO=2.8V（AVDD/DOVDD），
-OV3660 才有电 —— 顺序是 `shared_i2c_init → axp313a_begin → axp313a_set_camera_power → camera_init`。
-
-## 软件架构
+## 这台机器在干什么
 
 ```
-app_main
- ├─ 共用 I2C + AXP313A 摄像头上电
- ├─ TFT 初始化（ST7789 SPI 40MHz）
- ├─ OV3660 初始化（YUV422 / QVGA / 2 帧缓冲 @ PSRAM）
- ├─ view_task   (prio 5)   视频推流：采集 → YUV422→RGB888→大端RGB565 → 整屏刷屏 + 叠加识别框
- └─ detect_task (prio 3)   识别引擎：ESP-DL COCODetect(YOLO11n-320-int8) → 结果经互斥锁发布
+OV3660 拍桌面上的 4 寸屏
+   │  自动找屏框（连续 3 帧一致才采纳，采纳后锁 30 帧）+ 像素级边缘细化
+   │  点测光：把屏幕区亮度 p90 钉在 target，避免自发光屏幕削顶
+   │  裁剪：只把屏幕区（实测 128x84）喂给模型，而不是整张桌面
+   ▼
+items103 —— MobileNetV2 / 103 类常见物品 / INT8 espdl，2.6MB，跑在 flash 分区
+   ▼
+2.0" ST7789 实时推流 + 中文标签（如 `西瓜 99%`）      4.0" ST7796S 每 2 分钟随机出一张题
 ```
 
-- 两个任务共享摄像头帧缓冲（fb_count=2，取帧后尽快归还）；识别结果通过 `s_res_mux` 互斥锁
-  以"最新值覆盖"方式传给绘制任务，视频流畅度不受推理阻塞。
-- SPI 刷屏使用内部 RAM 的 4KB 中转缓冲（DMA 限制），PSRAM 存放帧转换暂存。
+两块屏各司其职：2 寸是**答案板**（看识别结果），4 寸是**出题板**（放题目图）。
+把实拍帧按真值存下来、增量微调、重导 INT8、重烧 —— 这就是自学习闭环
+（`docs/selflearn.md`）。
 
-### 目录结构
+## 当前实测指标
 
-```
-main/main.cpp           应用入口：I2C/AXP/摄像头初始化、推流+识别双任务、COCO-80 中文标签表
-components/
-  axp313a/              AXP313A 电源驱动（legacy i2c，摄像头供电轨控制）
-  tft_display/          ST7789 驱动 + 5x7 ASCII / 16x16 中文点阵（7549 字 GB2312 字库）
-                        tft_render_view()：视频帧 + 检测框叠加绘制
-  （以下出题机遗留组件，当前未编译进固件）
-  wifi_manager/ ai_client/ quiz_store/ math_generator/
-tools/gen_font_cn16.py  中文字库表生成脚本
-partitions.csv          app 4MB + SPIFFS 4MB + coco_det 模型分区 4MB (@0x810000)
-sdkconfig.defaults      目标/PSRAM/性能优化/模型选择等构建配置
-```
+| 项 | 值 |
+|----|----|
+| 类别数 | 103（`models/items103.yaml`，中文显示名见 `items103_classes.hpp`） |
+| 模型 | MobileNetV2 INT8 espdl，2,652,848 B；参数 2277KB + 激活 1666KB 全在 PSRAM |
+| 输入 | 224x224，端侧把裁剪帧**非等比拉伸**（几何链路见 `docs/model-pipeline.md` §2） |
+| 推理耗时 | 首次 **1986 ms**（`param_copy` 修复后）；稳态 4.3~5.6 s，偶发 13~19 s 尖峰（未解，见下） |
+| 实拍识别率 | 12 张溯源可信的帧：端侧 INT8 **9/12**，同一批 PC 上 fp32 **12/12** |
+| 屏幕反光 | 黑底 75 / 白顶 215，对比度只剩 **2.7:1**，蓝通道近削顶 |
+| 图库占用 | 103 张 480x320 = 1,840,081 / 3,787,841 B（SPIFFS 用了 48.6%） |
+| app 体积 | 3.0 MB / 4 MB 分区（剩 25%） |
 
-## 编译与烧录
+## 文档地图
 
-要求：ESP-IDF v5.3+（v5.3 下 esp-dl 需要的 `MALLOC_CAP_SIMD` 兼容处理已在顶层
-CMakeLists.txt 中自动完成），16MB Flash / 8MB PSRAM 的 ESP32-S3 目标。
+| 想知道 | 看哪篇 |
+|--------|--------|
+| 怎么接线（含「SD_CS 悬空会弄死整块屏」这类致命坑） | [docs/hardware-wiring.md](docs/hardware-wiring.md) |
+| IDF 版本、sdkconfig、分区表、全量/增量烧录 | [docs/build-flash.md](docs/build-flash.md) |
+| 模型从 AI 生图到 INT8 的完整链路、训练与量化 | [docs/model-pipeline.md](docs/model-pipeline.md) |
+| 自学习闭环：采帧、标签可信、微调、反光改善清单 | [docs/selflearn.md](docs/selflearn.md) |
+| 8 个 HTTP 调试端点与典型排查流程 | [docs/http-api.md](docs/http-api.md) |
+
+## 三十分钟跑起来
 
 ```bash
-source /path/to/esp-idf/export.sh
+# 0) 按 docs/hardware-wiring.md 接线（AXP313A 供电、SD_CS 接 3V3 是两处必查点）
+source /path/to/esp-idf/export.sh          # ESP-IDF v5.3
 cd ESP32-XM-dt
+
+# 1) 配 WiFi（凭据不入库，只写进本机 sdkconfig）
+idf.py menuconfig        # -> "Quiz AI 配置" -> CONFIG_WIFI_SSID / CONFIG_WIFI_PASSWORD
+
+# 2) 编译 + 全量烧录（app + 分区表 + items103.espdl + SPIFFS 图库）
 idf.py set-target esp32s3
-idf.py build
-idf.py -p /dev/ttyACM0 flash monitor   # 会自动烧录 app + 分区表 + YOLO11n 模型分区
+idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-注意：`sdkconfig.defaults` 只在**首次**生成 sdkconfig 时生效；如已存在 sdkconfig，
-可删除后重新 `idf.py build`，或手动核对以下关键项：
+上电后 2 寸屏会显示设备 IP。看到 `图库就绪：103 张` 和 `Items103 model loaded`
+就说明起来了。之后：
 
-| 配置 | 值 | 原因 |
-|------|----|------|
-| CONFIG_COMPILER_OPTIMIZATION_PERF | y | 推理提速约 20% |
-| CONFIG_ESP_TASK_WDT_TIMEOUT_S | 40 | 单帧推理约 6s，防看门狗复位 |
-| CONFIG_ESP32S3_DATA_CACHE_64KB / LINE_64B | y | ESP-DL 推荐配置 |
-| CONFIG_FLASH_COCO_DETECT_YOLO11N_320_S8_V1 | y | 只打包 320 输入模型（两个模型同时开会超出模型分区） |
+```bash
+IP=http://<那个 IP>
+curl "$IP/cam?spot=1&crop=1&adetect=1&target=200"   # ★ 重刷后必做，设置不持久
+curl "$IP/result.json"
+python3 tools/items103/label_server.py              # 标注台 http://localhost:8765
+```
 
-## 关键参数（main/main.cpp）
+PC 侧脚本的解释器分工（本机现状，别混用）：需要 `cv2` 或 `serial` 的
+（`cap_collect` / `cap_sheet` / `camcheck` / `camstat` / `camsweep` / `camsharp` /
+`eval_preproc` / `devlog`）**只能用 `python3`**（3.13，这两个包装在它里面；
+3.11 环境没装）；`label_server.py` 只依赖 yaml，两个都能跑；
+`tools/items103/selflearn.sh` 内部写死了训练用 `python3.11`、量化导出用
+`/home/oooa/miniforge3/envs/espdl/bin/python`。
 
-- `SCORE_THR = 0.35f`：检测置信度阈值，调低召回更多、误检也更多
-- `DET_MAX_OBJS = 8`：同屏最多绘制目标数
-- 分辨率固定 QVGA 320x240，与屏幕 1:1 对齐，无需坐标缩放
+## 目录结构
 
-## 已知限制
+```
+main/
+  main.cpp             摄像头/双屏/模型/WiFi 初始化，推流+识别双任务，找屏+点测光+裁剪，HTTP 端点
+  quiz_photos.cpp      SPIFFS 图库扫描 + 定时随机出题任务
+components/
+  items103/            当前在用的分类模型封装（esp-dl Model + ImagePreprocessor）
+  tft_display/         tft_display.c：2.0" ST7789(SPI2) + 中文字库；tft_big.c：4.0" ST7796S(SPI3)
+  axp313a/             摄像头供电轨控制（V1.1 板必需）
+  wifi_manager/        WiFi 连接
+  items127/ ai_client/ quiz_store/ math_generator/   ← 历史遗留，见下
+tools/
+  items103/            增强→训练→量化→采集→评估→自学习 全链路脚本
+  camstat/camcheck/camsweep/camsharp.py  摄像头曝光与清晰度诊断
+  devlog.py            串口日志落文件
+espdl_files/items103.espdl   设备正在跑的 INT8 模型（入库）
+spiffs_data/photos/          103 张出题原图 480x320（入库）
+augmented/<类>/              2060 张屏幕模拟增强图（入库，生成脚本未留存，勿删）
+models/train_items103/       best.pth / last.pth / classes103.json（入库，可离线重导量化）
+partitions.csv               app 4MB + items103 4MB + coco_det 4MB + SPIFFS 3.94MB
+sdkconfig.defaults           可复用的非默认构建配置（凭据不在里面）
+```
 
-- COCO-80 类别中没有"毛巾"等类别；需要更多类别时可用 ESP-DL 训练管线换自训练模型
-- 端到端推理约 5~6 秒/帧（S3 @240MHz，INT8 量化模型，输入 320x320）
-- V1.1 板必须经 AXP313A 开电才有摄像头画面；V1.2+ 板无需此步
+### 已停用的遗留组件
+
+`items127`（上一代 127 类模型）、`fruit19`、以及出题机时代的
+`ai_client` / `quiz_store` 都**不参与识别链路**，保留只为历史可查。
+`math_generator` 仍被 `tft_display` 依赖（点阵字库的构建顺序），别顺手删。
+当前固件的模型组件只有 `items103`（见 `main/CMakeLists.txt` 的 `REQUIRES`）。
+
+## 已知限制与待办
+
+- **推理耗时随运行时间漂移**：首次 2 s，跑久后稳态 4.3~5.6 s、偶发 13~19 s 尖峰，
+  预处理也从 7ms 偶发到 300/429ms —— 同一个 PSRAM/cache 争用的特征，但还没定位到具体来源。
+- **INT8 是当前精度瓶颈，不是反光**：同一批实拍帧 fp32 全对、INT8 错 3 张。
+  最可疑的是量化校准集用的是干净合成图，与实拍眩光域对不上。
+  下一步：把实拍帧混进校准集重导一次 INT8（不用重训）。
+- **软件反光校正已验证不划算**：11 种预处理变体相对 `raw` 全部 +0，
+  所以固件裁剪路径**不要**加去底/拉伸/白平衡。改善要靠物理手段（挪近、关灯、倾屏）。
+- **4 寸屏 SPI 时钟还烧在 1 MHz**（blit 2487ms，8 MHz 时约 343ms）。
+  杜邦线能顶到多少没测完；现在可以用摄像头拍屏看有没有整段行错位来判，不用人眼盯。
+- **背光不可调**：4 寸屏 LED 现在硬接 3V3。改到 IO12 后可以做 LEDC PWM 调光，
+  从源头压眩光（`GET /big?bl_pin=12` 可先在线验证）。
+- 内部 RAM 跑满后最大连续块只剩约 2.7 KB，所以新任务必须在 `app_main` 早期创建、
+  读 flash 的任务栈不能放 PSRAM —— 这是 `quiz_task` 起不来那次的根因。
 
 ## 致谢
 
-- [DFRobot Wiki](https://wiki.dfrobot.com.cn/_SKU_DFR0975_FireBeetle_2_Board_ESP32_S3_Advanced_Tutorial)（GDI/CAM 引脚表）
-- [esp-dl](https://github.com/espressif/esp-dl) / [coco_detect](https://github.com/espressif/esp-dl)（ESP-NN 端侧推理）
-- [esp32-camera](https://github.com/espressif/esp32-camera)
+- [DFRobot FireBeetle 2 ESP32-S3 Wiki](https://wiki.dfrobot.com.cn/_SKU_DFR0975_FireBeetle_2_Board_ESP32_S3_Advanced_Tutorial)（GDI/CAM 引脚表）
+- [esp-dl](https://github.com/espressif/esp-dl)（INT8 espdl 推理与量化导出）
+- [esp32-camera](https://github.com/espressif/esp32-camera) / [LCDWiki 4.0" ST7796S](https://www.lcdwiki.com/4.0inch_SPI_Module_ST7796S_KD)
