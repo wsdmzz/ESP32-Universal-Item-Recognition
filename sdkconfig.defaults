@@ -1,38 +1,59 @@
-# FireBeetle 2 ESP32-S3 默认配置
-CONFIG_IDF_TARGET="esp32s3"
-CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240=y
-CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
-CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
-CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
-CONFIG_SPIRAM=y
-CONFIG_SPIRAM_MODE_OCT=y
-CONFIG_SPIRAM_SPEED_80M=y
-CONFIG_SPIRAM_BOOT_INIT=y
-CONFIG_SPIRAM_USE_MALLOC=y
-CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=4096
-CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
-CONFIG_FREERTOS_HZ=1000
-CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+# Espressif IoT Development Framework (ESP-IDF) 5.3.0 Project Minimal Configuration
+#
+# 由 `idf.py save-defconfig` 从实机 sdkconfig 生成，再人工整理：
+# 只留非默认项，删掉凭据与已失效的 coco_detect 模型烧录开关。
+# 这份文件只在 **首次** 生成 sdkconfig 时生效；已有 sdkconfig 时改动不会被套用
+# （核对/重建办法见 docs/build-flash.md）。
 
-# 自定义分区表（含 SPIFFS 题库存储）
+CONFIG_IDF_TARGET="esp32s3"
+
+# ---------- Flash / 分区 ----------
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
-# HTTPS（通义千问 API）
-CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
-CONFIG_ESP_HTTPS_ENABLE=y
+# ---------- 运行凭据（故意留空，不要写进 git） ----------
+# WiFi 与 API Key 属于本机私密配置，只存在于被 .gitignore 排除的 sdkconfig 里。
+# 首次构建后执行：idf.py menuconfig -> "Quiz AI 配置"，填
+#   CONFIG_WIFI_SSID / CONFIG_WIFI_PASSWORD（必填，HTTP 调试接口靠这个网络）
+#   CONFIG_QWEN_API_KEY（可留空，items103 端侧识别不需要云端）
+# 选项定义见 main/Kconfig.projbuild。
+CONFIG_WIFI_SSID="my_wifi"
+CONFIG_WIFI_PASSWORD="my_password"
+CONFIG_QWEN_API_KEY=""
 
-# SPIFFS
-CONFIG_SPIFFS_MAX_PARTITIONS=1
-
-# ===== 端侧目标识别 (ESP-DL YOLO11n) =====
+# ---------- 端侧推理性能相关（esp-dl 推荐配置） ----------
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
-CONFIG_ESP_TASK_WDT_TIMEOUT_S=40
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
 CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
 CONFIG_ESP32S3_DATA_CACHE_64KB=y
 CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
-# 模型烧录到 coco_det 分区（只打包 320 输入版，避免超出 3MB 分区）
-# CONFIG_FLASH_COCO_DETECT_YOLO11N_S8_V1 is not set
-CONFIG_FLASH_COCO_DETECT_YOLO11N_320_S8_V1=y
-CONFIG_COCO_DETECT_YOLO11N_320_S8_V1=y
+
+# ---------- PSRAM：N16R8 的 8MB 八线 ----------
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+# 超过 4KB 的分配允许落到 PSRAM：模型权重拷贝、帧缓冲都在这一档
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=4096
+
+# ---------- 任务 ----------
+# detect_task 单轮推理 4~20 秒，看门狗必须放宽，否则复位
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=40
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_FREERTOS_HZ=1000
+CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y
+
+# ---------- SPIFFS：4 寸屏的 103 张出题图库 ----------
+CONFIG_SPIFFS_MAX_PARTITIONS=1
+
+# ---------- coco_detect：只是 esp-dl 的传递依赖，固件不用它 ----------
+# 但它的 Kconfig 里 COCO_DETECT_YOLO11N_* 依赖 FLASH_COCO_DETECT_* 或 SD 卡，
+# 一个都不选会让打包脚本 pack_espdl_models.py 报
+# "expected at least one argument" 直接构建失败。所以必须留一个：
+# 选 320 输入那版（与本项目摄像头帧同比例，且只有一份），刷进 partitions.csv
+# 里预留的 coco_det 分区（0x810000, 4MB）。设备真正用的模型在 **items103 分区**
+# (0x410000)，由顶层 CMakeLists.txt 的 esptool_py_flash_to_partition 写入。
 CONFIG_COCO_DETECT_MODEL_IN_FLASH_PARTITION=y
+CONFIG_FLASH_COCO_DETECT_YOLO11N_320_S8_V1=y
+# CONFIG_FLASH_COCO_DETECT_YOLO11N_S8_V1 is not set
